@@ -250,29 +250,21 @@ location / {
 }
 ```
 
-### Scenario B: Separated locations (flexible path)
+### Scenario B: Hidden admin path (recommended)
 
-Separate locations for API, admin SPA, and static assets. Supports custom admin path via `adminPath` in `server.yaml`.
+Hide the admin SPA behind a secret nginx path. Accessing `/admin` or any other path directly returns 404. Only the secret path can load the admin UI.
 
-**`server.yaml`**:
-```yaml
-httpConfig:
-  adminPath: "/admin"
-```
-
-**nginx**:
 ```nginx
-# ─── Admin SPA：外部 /xxxadmin → 后端 /admin（路径重写）───
-# 去掉 proxy_pass 的 /admin 后缀即不重写，保持前后路径一致
-location /xxxadmin {
-    proxy_pass http://127.0.0.1:8080/admin;
+# ─── Secret admin entry (change "/my-secret-path" to your own path) ───
+location /my-secret-path/ {
+    proxy_pass http://127.0.0.1:8080/;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
 }
 
-# ─── Static assets (with long-term cache) ───
+# ─── Static assets (needed by SPA) ───
 location /assets {
     proxy_pass http://127.0.0.1:8080;
     proxy_set_header Host $host;
@@ -283,8 +275,8 @@ location /assets {
     add_header Cache-Control "public, immutable";
 }
 
-# ─── Admin API ───
-location /admin {
+# ─── Admin API (used by SPA internally, requires authentication) ───
+location ~ ^/admin/(auth|userinfo|dashboard|users|sessions|audit|devices|mail) {
     proxy_pass http://127.0.0.1:8080;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
@@ -304,9 +296,15 @@ location /api {
     proxy_http_version 1.1;
     add_header X-Cache $upstream_cache_status;
 }
+
+# ─── Block everything else ───
+location / {
+    deny all;
+    return 404;
+}
 ```
 
-> **Note**: If `adminPath` is set to `/` (default), the admin SPA is served at root. Use `location /` for the admin SPA location in that case.
+> Access your admin SPA at `https://example.com/my-secret-path/`. Requests to `/admin`, `/admin/`, or any other path return 404.
 
 ### Scenario C: Nginx serves static files (highest performance)
 
