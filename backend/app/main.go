@@ -40,13 +40,6 @@ func newApp(cfg *config.ServerConfig) (*iris.Application, error) {
 		SPA: true,
 	})
 
-	adminPath := cfg.HttpConfig.AdminPath
-	if adminPath != "" && adminPath != "/" {
-		app.HandleDir(adminPath, iris.Dir(cfg.HttpConfig.StaticDir), iris.DirOptions{
-			SPA: true,
-		})
-	}
-
 	return app, nil
 }
 
