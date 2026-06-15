@@ -44,7 +44,7 @@ COPY --chmod=755 ./docker/start.sh .
 RUN apk add --no-cache tzdata
 
 # 设置文件权限
-RUN mkdir -p /app/data && chown -R appuser:appgroup /app
+RUN mkdir -p /app/data /var/log && chown -R appuser:appgroup /app /var/log
 
 # 切换到非 root 用户
 USER appuser
