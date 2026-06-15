@@ -36,13 +36,12 @@ func newApp(cfg *config.ServerConfig) (*iris.Application, error) {
 
 	SetRoute(app)
 
+	app.HandleDir("/", iris.Dir(cfg.HttpConfig.StaticDir), iris.DirOptions{
+		SPA: true,
+	})
+
 	adminPath := cfg.HttpConfig.AdminPath
-	if adminPath == "" || adminPath == "/" {
-		app.HandleDir("/", iris.Dir(cfg.HttpConfig.StaticDir), iris.DirOptions{
-			SPA: true,
-		})
-	} else {
-		app.HandleDir("/", iris.Dir(cfg.HttpConfig.StaticDir))
+	if adminPath != "" && adminPath != "/" {
 		app.HandleDir(adminPath, iris.Dir(cfg.HttpConfig.StaticDir), iris.DirOptions{
 			SPA: true,
 		})
