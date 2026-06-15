@@ -236,10 +236,64 @@ Reverse Proxy Configuration, you need to configure reverse proxy in `nginx` or o
 
 Here's my backend reverse proxy configuration for you to refer to:
 
+### Scenario A: Single location (simplest)
+
+Proxies all requests to the Go backend. API routing and SPA fallback are handled by the backend.
+
 ```nginx
-#PROXY-START /api for rustdesk client
-location ^~ /api
-{
+location / {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+### Scenario B: Separated locations (flexible path)
+
+Separate locations for API, admin SPA, and static assets. Supports custom admin path via `adminPath` in `server.yaml`.
+
+**`server.yaml`**:
+```yaml
+httpConfig:
+  adminPath: "/admin"
+```
+
+**nginx**:
+```nginx
+# ─── Admin SPA：外部 /xxxadmin → 后端 /admin（路径重写）───
+# 去掉 proxy_pass 的 /admin 后缀即不重写，保持前后路径一致
+location /xxxadmin {
+    proxy_pass http://127.0.0.1:8080/admin;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+
+# ─── Static assets (with long-term cache) ───
+location /assets {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    expires 1y;
+    add_header Cache-Control "public, immutable";
+}
+
+# ─── Admin API ───
+location /admin {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+
+# ─── RustDesk client API (with WebSocket support) ───
+location /api {
     proxy_pass http://127.0.0.1:8080;
     proxy_set_header Host 127.0.0.1;
     proxy_set_header X-Real-IP $remote_addr;
@@ -248,16 +302,40 @@ location ^~ /api
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection $connection_upgrade;
     proxy_http_version 1.1;
-    # proxy_hide_header Upgrade;
-
     add_header X-Cache $upstream_cache_status;
 }
-#PROXY-END/
+```
 
-#PROXY-START /admin for web-ui
-location ^~ /admin
-{
-    proxy_pass http://127.0.0.1:8080/admin;
+> **Note**: If `adminPath` is set to `/` (default), the admin SPA is served at root. Use `location /` for the admin SPA location in that case.
+
+### Scenario C: Nginx serves static files (highest performance)
+
+Static files are served directly by nginx; the Go backend only handles API requests.
+
+**`server.yaml`**:
+```yaml
+httpConfig:
+  adminPath: "/admin"
+```
+
+**nginx**:
+```nginx
+# ─── Admin SPA (served by nginx) ───
+location /admin {
+    alias /path/to/dist;
+    try_files $uri $uri/ /admin/index.html;
+}
+
+# ─── Static assets (served by nginx, long-term cache) ───
+location /assets {
+    alias /path/to/dist/assets;
+    expires 1y;
+    add_header Cache-Control "public, immutable";
+}
+
+# ─── API (proxied to Go backend) ───
+location /api {
+    proxy_pass http://127.0.0.1:8080;
     proxy_set_header Host 127.0.0.1;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -265,12 +343,11 @@ location ^~ /admin
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection $connection_upgrade;
     proxy_http_version 1.1;
-    # proxy_hide_header Upgrade;
-
     add_header X-Cache $upstream_cache_status;
 }
-#PROXY-END/
 ```
+
+> **Note**: Requires the frontend build output (`dist/`) to be accessible by nginx (e.g., mounted volume or copied to the nginx container).
 
 ## CLI help
 

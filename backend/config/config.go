@@ -28,6 +28,7 @@ type HttpConfig struct {
 	PrintRequestLog bool   `yaml:"printRequestLog"`
 	Port            string `yaml:"port"`
 	StaticDir       string `yaml:"staticdir"`
+	AdminPath       string `yaml:"adminPath"`
 }
 
 type SmtpConfig struct {
