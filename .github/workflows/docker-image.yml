@@ -62,4 +62,6 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Show image size
-        run: docker images ghcr.io/${{ github.repository_owner }}/rustdesk-api-server-pro:latest --format '{{.Repository}}:{{.Tag}} {{.Size}}'
+        run: |
+          docker image inspect ghcr.io/${{ github.repository_owner }}/rustdesk-api-server-pro:latest \
+            --format '{{.Repository}}:{{.Tag}} {{.Size}}' | awk '{printf "%.2f MB\n", $NF/1024/1024}'
