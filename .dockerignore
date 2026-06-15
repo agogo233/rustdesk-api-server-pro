@@ -1,0 +1,33 @@
+# 忽略不需要的文件，减小构建上下文
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# 文档
+*.md
+LICENSE
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# 依赖目录
+backend/vendor
+soybean-admin/node_modules
+soybean-admin/*/node_modules
+
+# 构建产物
+backend/rustdesk-api-server-pro
+soybean-admin/dist
+
+# 临时文件
+*.tmp
+*.log
+.DS_Store
