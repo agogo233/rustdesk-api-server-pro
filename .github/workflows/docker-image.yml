@@ -1,30 +1,37 @@
-#
 name: Docker build
 
-# This workflow runs when any of the following occur:
-# - A push is made to a branch called `main` or `seed`
-# - A tag starting with "v" is created
-# - A pull request is created or updated
 on:
+  push:
+    branches: [ master ]
   workflow_dispatch:
-  # This creates an environment variable called `IMAGE_NAME ` with the value `ghtoken_product_demo`.
+
 env:
   IMAGE_NAME: rustdesk-api-server-pro
-#
+
 jobs:
-  # This pushes the image to GitHub Packages.
+  # 清理旧镜像
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: Delete old container images
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: ${{ env.IMAGE_NAME }}
+          package-type: container
+          min-versions-to-keep: 3
+          delete-only-untagged-versions: false
+
+  # 构建和推送新镜像
   push:
     runs-on: ubuntu-latest
     permissions:
       packages: write
       contents: read
-      #
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -34,10 +41,22 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/rustdesk-api-server-pro
+          tags: |
+            type=sha
+            type=raw,value=latest
+
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/rustdesk-api-server-pro:latest
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
