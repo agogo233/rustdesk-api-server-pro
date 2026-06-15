@@ -20,12 +20,9 @@ RUN go build -ldflags="-s -w" -o rustdesk-api-server-pro .
 FROM node:20-alpine AS node
 WORKDIR /frontend
 
-# 先复制 package.json 和 pnpm-lock.yaml，利用 Docker 层缓存
-COPY ./soybean-admin/package.json ./soybean-admin/pnpm-lock.yaml ./
+COPY ./soybean-admin ./
 RUN npm install -g pnpm && pnpm i --frozen-lockfile
 
-# 再复制源码进行构建
-COPY ./soybean-admin .
 RUN pnpm build
 
 # 最终运行阶段

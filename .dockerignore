@@ -25,7 +25,7 @@ soybean-admin/*/node_modules
 
 # 构建产物
 backend/rustdesk-api-server-pro
-soybean-admin/dist
+# soybean-admin/dist 前端构建产物需要保留
 
 # 临时文件
 *.tmp
