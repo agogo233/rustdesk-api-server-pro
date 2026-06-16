@@ -24,6 +24,20 @@ var userAddCmd = &cobra.Command{
 		username := args[0]
 		password, _ := util.Password(args[1])
 
+		cfg := config.GetServerConfig()
+		engine, err := db.NewEngine(cfg.Db)
+		if err != nil {
+			fmt.Println("Db Engine create error:", err)
+			return
+		}
+
+		var existing model.User
+		has, _ := engine.Where("username = ?", username).Get(&existing)
+		if has {
+			fmt.Println("User already exists, skip")
+			return
+		}
+
 		user := &model.User{
 			Username:        username,
 			Password:        password,
@@ -32,12 +46,6 @@ var userAddCmd = &cobra.Command{
 			LoginVerify:     model.LOGIN_ACCESS_TOKEN,
 			IsAdmin:         isAdmin,
 			Status:          1,
-		}
-		cfg := config.GetServerConfig()
-		engine, err := db.NewEngine(cfg.Db)
-		if err != nil {
-			fmt.Println("Db Engine create error:", err)
-			return
 		}
 		_, err = engine.Insert(user)
 		if err != nil {
