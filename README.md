@@ -254,6 +254,14 @@ location / {
 
 Hide the admin SPA behind a secret nginx path. Accessing `/admin` or any other path directly returns 404. Only the secret path can load the admin UI.
 
+> **Note**: Add this `map` block **inside the `http` block** (outside `server`) for WebSocket support:
+> ```nginx
+> map $http_upgrade $connection_upgrade {
+>     default  upgrade;
+>     ''       close;
+> }
+> ```
+
 ```nginx
 # ─── Secret admin entry (change "/my-secret-path" to your own path) ───
 location /my-secret-path/ {
@@ -287,14 +295,13 @@ location ~ ^/admin/(auth|userinfo|dashboard|users|sessions|audit|devices|mail) {
 # ─── RustDesk client API (with WebSocket support) ───
 location /api {
     proxy_pass http://127.0.0.1:8080;
-    proxy_set_header Host 127.0.0.1;
+    proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header REMOTE-HOST $remote_addr;
+    proxy_set_header X-Forwarded-Proto $scheme;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection $connection_upgrade;
     proxy_http_version 1.1;
-    add_header X-Cache $upstream_cache_status;
 }
 
 # ─── Block everything else ───
@@ -334,14 +341,13 @@ location /assets {
 # ─── API (proxied to Go backend) ───
 location /api {
     proxy_pass http://127.0.0.1:8080;
-    proxy_set_header Host 127.0.0.1;
+    proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header REMOTE-HOST $remote_addr;
+    proxy_set_header X-Forwarded-Proto $scheme;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection $connection_upgrade;
     proxy_http_version 1.1;
-    add_header X-Cache $upstream_cache_status;
 }
 ```
 

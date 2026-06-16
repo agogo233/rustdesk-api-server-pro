@@ -4,12 +4,13 @@ import (
 	"rustdesk-api-server-pro/app/controller/admin"
 	"rustdesk-api-server-pro/app/controller/api"
 	"rustdesk-api-server-pro/app/middleware"
+	"rustdesk-api-server-pro/config"
 
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/mvc"
 )
 
-func SetRoute(app *iris.Application) {
+func SetRoute(app *iris.Application, cfg *config.ServerConfig) {
 	apiParty := app.Party("/api")
 	apiMvc := mvc.New(apiParty)
 	apiMvc.Handle(new(api.SystemController))
@@ -27,11 +28,16 @@ func SetRoute(app *iris.Application) {
 		apiWithAuthMvc.Handle(new(api.AddressBookTagController))
 	}
 
-	adminParty := app.Party("/admin")
+	adminPath := cfg.HttpConfig.AdminPath
+	if adminPath == "" || adminPath == "/" {
+		adminPath = "/admin"
+	}
+
+	adminParty := app.Party(adminPath)
 	adminMvc := mvc.New(adminParty)
 	adminMvc.Handle(new(admin.AuthController))
 
-	adminWithAuthParty := app.Party("/admin")
+	adminWithAuthParty := app.Party(adminPath)
 	adminWithAuthParty.Use(middleware.AdminAuth(app))
 	{
 		adminWithAuthMvc := mvc.New(adminWithAuthParty)

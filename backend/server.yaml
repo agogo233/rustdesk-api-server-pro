@@ -10,9 +10,9 @@ db:
   # dsn: "root:123@tcp(localhost:3306)/test?charset=utf8mb4"
 httpConfig:
   printRequestLog: true
-  staticdir: "/app/dist"
+  staticdir: "/app/dist" # Docker 内路径；源码部署请改为 dist 实际路径（如 "../soybean-admin/dist"）
   port: ":8080" # api server port
-  adminPath: "/admin" # admin SPA mount path, "" or "/" means root
+  adminPath: "/admin" # 管理后台 API 路由前缀，修改后需同步修改前端 .env.prod 中 VITE_SERVICE_BASE_URL 并重新构建
 
 smtpConfig:
   host: "127.0.0.1"

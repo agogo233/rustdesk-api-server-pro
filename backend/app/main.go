@@ -34,7 +34,7 @@ func newApp(cfg *config.ServerConfig) (*iris.Application, error) {
 		app.Use(middleware.RequestLogger())
 	}
 
-	SetRoute(app)
+	SetRoute(app, cfg)
 
 	app.HandleDir("/", iris.Dir(cfg.HttpConfig.StaticDir), iris.DirOptions{
 		SPA: true,

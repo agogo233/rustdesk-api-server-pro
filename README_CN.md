@@ -201,41 +201,90 @@ rustdesk-api-server-pro.exe start
 
 反向代理配置，你需要将在`nginx`或其他WEB服务器中配置反向代理，通过反向代理服务端才能正确访问到接口地址。
 
-下面是`nginx`反向代理的参考配置：
+> **提示**：如果不需要 Nginx 单独处理静态文件，最简单的配置是单个 `location /` 将所有请求转发给后端（后端自带 SPA 处理），详见英文 README 的方案 A。
+
+下面是`nginx`反向代理的参考配置（推荐的完整方案）：
+
 ```nginx
-#PROXY-START /api for rustdesk client
-location ^~ /api
-{
+# WebSocket 支持（必须放在 server 块内）
+map $http_upgrade $connection_upgrade {
+    default  upgrade;
+    ''       close;
+}
+
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    # ─── RustDesk 客户端 API（含 WebSocket） ───
+    location ^~ /api {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_http_version 1.1;
+    }
+
+    # ─── 管理后台 API ───
+    location ^~ /admin {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # ─── 前端静态资源（长期缓存） ───
+    location /assets {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # ─── 管理后台 SPA 入口（hash 路由，无需服务端 fallback） ───
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+### 如果 Nginx 直接托管静态文件（更高性能）
+
+将打包产物（`soybean-admin/dist`）放置到 Nginx 可访问的路径，并修改 `server.yaml` 确保 `staticdir` 指向正确路径：
+
+```nginx
+# ─── 管理后台 SPA ───
+location /admin {
+    alias /path/to/dist;
+    try_files $uri $uri/ /admin/index.html;
+}
+
+# ─── 前端静态资源（长期缓存） ───
+location /assets {
+    alias /path/to/dist/assets;
+    expires 1y;
+    add_header Cache-Control "public, immutable";
+}
+
+# ─── API 代理到后端 ───
+location /api {
     proxy_pass http://127.0.0.1:8080;
-    proxy_set_header Host 127.0.0.1;
+    proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header REMOTE-HOST $remote_addr;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection $connection_upgrade;
     proxy_http_version 1.1;
-    # proxy_hide_header Upgrade;
-
-    add_header X-Cache $upstream_cache_status;
 }
-#PROXY-END/
-
-#PROXY-START /admin for web-ui
-location ^~ /admin
-{
-    proxy_pass http://127.0.0.1:8080/admin;
-    proxy_set_header Host 127.0.0.1;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header REMOTE-HOST $remote_addr;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection $connection_upgrade;
-    proxy_http_version 1.1;
-    # proxy_hide_header Upgrade;
-
-    add_header X-Cache $upstream_cache_status;
-}
-#PROXY-END/
+```
 ```
 
 ## CLI命令行

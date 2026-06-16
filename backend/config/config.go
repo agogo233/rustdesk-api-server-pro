@@ -65,6 +65,7 @@ func GetDefaultServerConfig() *ServerConfig {
 		HttpConfig: &HttpConfig{
 			Port:      ":8080",
 			StaticDir: "dist",
+			AdminPath: "/admin",
 		},
 		SignKey: util.RandomString(32),
 		JobsConfig: &JobsConfig{
