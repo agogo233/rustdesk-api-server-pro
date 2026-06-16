@@ -40,6 +40,12 @@ func newApp(cfg *config.ServerConfig) (*iris.Application, error) {
 	app.Get("/", func(ctx iris.Context) {
 		ctx.ServeFile(path.Join(cfg.HttpConfig.StaticDir, "index.html"))
 	})
+	app.Get("/admin", func(ctx iris.Context) {
+		ctx.ServeFile(path.Join(cfg.HttpConfig.StaticDir, "index.html"))
+	})
+	app.Get("/admin/", func(ctx iris.Context) {
+		ctx.ServeFile(path.Join(cfg.HttpConfig.StaticDir, "index.html"))
+	})
 
 	app.HandleDir("/", iris.Dir(cfg.HttpConfig.StaticDir), iris.DirOptions{
 		SPA: true,
