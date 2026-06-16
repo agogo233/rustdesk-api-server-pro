@@ -14,7 +14,7 @@ fi
 mkdir -p /app/data /var/log
 chown "$(id -u):$(id -g)" /app/data /var/log 2>/dev/null || true
 
-cd /app/data
+cd /app
 
 if [ ! -f "$BIN_RECORD" ] && [ -n "$ADMIN_USER" ] && [ -n "$ADMIN_PASS" ]; then
   "$BIN_PATH" user add "$ADMIN_USER" "$ADMIN_PASS" --admin 2>"$LOG" && touch "$BIN_RECORD" || true
