@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"path"
 	"rustdesk-api-server-pro/app/middleware"
 	"rustdesk-api-server-pro/config"
 	"rustdesk-api-server-pro/db"
@@ -35,6 +36,10 @@ func newApp(cfg *config.ServerConfig) (*iris.Application, error) {
 	}
 
 	SetRoute(app, cfg)
+
+	app.Get("/", func(ctx iris.Context) {
+		ctx.ServeFile(path.Join(cfg.HttpConfig.StaticDir, "index.html"))
+	})
 
 	app.HandleDir("/", iris.Dir(cfg.HttpConfig.StaticDir), iris.DirOptions{
 		SPA: true,
