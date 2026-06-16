@@ -2,7 +2,7 @@ signKey: "sercrethatmaycontainch@r$32chars" # this is the token signing key. cha
 debugMode: true # debug mode
 db:
   driver: "sqlite"
-  dsn: "./data/server.db"
+  dsn: "./data/server.db" # 工作目录为 /app，故解析为 /app/data/server.db；可改为绝对路径 "/app/data/server.db"
   timeZone: "Asia/Shanghai" # setting the time zone fixes the database creation time problem
   showSql: false
 

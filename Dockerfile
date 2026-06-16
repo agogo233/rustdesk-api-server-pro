@@ -40,14 +40,11 @@ COPY --from=golang /backend/server.yaml .
 COPY --from=node /frontend/dist ./dist
 COPY --chmod=755 ./docker/start.sh .
 
-# 安装时区数据
-RUN apk add --no-cache tzdata
+# 安装时区数据 + 进程降权工具
+RUN apk add --no-cache tzdata su-exec
 
 # 设置文件权限
 RUN mkdir -p /app/data /var/log && chown -R appuser:appgroup /app /var/log
-
-# 切换到非 root 用户
-USER appuser
 
 EXPOSE 8080
 
