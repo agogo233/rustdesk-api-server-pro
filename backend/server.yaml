@@ -11,7 +11,7 @@ db:
 httpConfig:
   printRequestLog: true
   staticdir: "/app/dist"
-  port: ":12345" # api server port
+  port: ":8080" # api server port
   adminPath: "/admin" # admin SPA mount path, "" or "/" means root
 
 smtpConfig:
