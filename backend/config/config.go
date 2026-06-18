@@ -8,13 +8,20 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type SecurityConfig struct {
+	IpLockThreshold      int `yaml:"ipLockThreshold"`
+	IpLockMinutes        int `yaml:"ipLockMinutes"`
+	IpRateLimitPerMinute int `yaml:"ipRateLimitPerMinute"`
+}
+
 type ServerConfig struct {
-	DebugMode  bool        `yaml:"debugMode"`
-	Db         *DbConfig   `yaml:"db"`
-	SignKey    string      `yaml:"signKey"`
-	HttpConfig *HttpConfig `yaml:"httpConfig"`
-	SmtpConfig *SmtpConfig `yaml:"smtpConfig"`
-	JobsConfig *JobsConfig `yaml:"jobsConfig"`
+	DebugMode      bool            `yaml:"debugMode"`
+	Db             *DbConfig       `yaml:"db"`
+	SignKey        string          `yaml:"signKey"`
+	HttpConfig     *HttpConfig     `yaml:"httpConfig"`
+	SmtpConfig     *SmtpConfig     `yaml:"smtpConfig"`
+	JobsConfig     *JobsConfig     `yaml:"jobsConfig"`
+	SecurityConfig *SecurityConfig `yaml:"security"`
 }
 
 type DbConfig struct {
@@ -68,6 +75,11 @@ func GetDefaultServerConfig() *ServerConfig {
 			AdminPath: "/admin",
 		},
 		SignKey: util.RandomString(32),
+		SecurityConfig: &SecurityConfig{
+			IpLockThreshold:      5,
+			IpLockMinutes:        15,
+			IpRateLimitPerMinute: 10,
+		},
 		JobsConfig: &JobsConfig{
 			DeviceCheckJob: &DeviceCheckJob{
 				Duration: 30,

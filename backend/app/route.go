@@ -34,6 +34,7 @@ func SetRoute(app *iris.Application, cfg *config.ServerConfig) {
 	}
 
 	adminParty := app.Party(adminPath)
+	adminParty.Use(middleware.RateLimit(cfg.SecurityConfig.IpRateLimitPerMinute))
 	adminMvc := mvc.New(adminParty)
 	adminMvc.Handle(new(admin.AuthController))
 

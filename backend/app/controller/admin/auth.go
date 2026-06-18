@@ -3,6 +3,7 @@ package admin
 import (
 	"os"
 	"rustdesk-api-server-pro/app/form/admin"
+	"rustdesk-api-server-pro/app/middleware"
 	"rustdesk-api-server-pro/app/model"
 	"rustdesk-api-server-pro/config"
 	"rustdesk-api-server-pro/helper/captcha"
@@ -26,7 +27,13 @@ func (c *AuthController) PostAuthLogin() mvc.Result {
 		return c.Error(nil, err.Error())
 	}
 
+	ip := middleware.GetRealIP(c.Ctx)
+	if middleware.IsIpLocked(ip) {
+		return c.Error(nil, "LoginAttemptsExceeded")
+	}
+
 	if os.Getenv("E2E_SKIP_CAPTCHA") != "true" && !captcha.VerifyCode(loginForm.CaptchaId, loginForm.Code) {
+		middleware.RecordFailedAttempt(ip)
 		return c.Error(nil, "CaptchaError")
 	}
 
@@ -37,12 +44,16 @@ func (c *AuthController) PostAuthLogin() mvc.Result {
 	}
 
 	if !get {
+		middleware.RecordFailedAttempt(ip)
 		return c.Error(nil, "UserNotExists")
 	}
 
 	if !util.PasswordVerify(loginForm.Password, user.Password) {
+		middleware.RecordFailedAttempt(ip)
 		return c.Error(nil, "UsernameOrPasswordError")
 	}
+
+	middleware.RecordSuccess(ip)
 
 	// make other tokens expired
 	_, _ = c.Db.Where("user_id = ? and status = 1 and is_admin = 1", user.Id).Cols("status").Update(&model.AuthToken{
