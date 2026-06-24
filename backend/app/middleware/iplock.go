@@ -11,6 +11,7 @@ import (
 )
 
 type ipEntry struct {
+	mu          sync.Mutex
 	failedCount int
 	lockedUntil time.Time
 }
@@ -36,15 +37,23 @@ func GetRealIP(ctx iris.Context) string {
 func RecordFailedAttempt(ip string) {
 	cfg := config.GetServerConfig().SecurityConfig
 	threshold := cfg.IpLockThreshold
+	if threshold <= 0 {
+		threshold = 5
+	}
 	lockDuration := time.Duration(cfg.IpLockMinutes) * time.Minute
+	if lockDuration <= 0 {
+		lockDuration = 15 * time.Minute
+	}
 
 	actual, _ := ipRecords.LoadOrStore(ip, &ipEntry{})
 	entry := actual.(*ipEntry)
 
+	entry.mu.Lock()
 	entry.failedCount++
 	if entry.failedCount >= threshold {
 		entry.lockedUntil = time.Now().Add(lockDuration)
 	}
+	entry.mu.Unlock()
 }
 
 func RecordSuccess(ip string) {
@@ -57,6 +66,10 @@ func IsIpLocked(ip string) bool {
 		return false
 	}
 	entry := actual.(*ipEntry)
+
+	entry.mu.Lock()
+	defer entry.mu.Unlock()
+
 	if entry.lockedUntil.IsZero() {
 		return false
 	}
@@ -75,15 +88,15 @@ func startIpCleanup() {
 			for range ticker.C {
 				ipRecords.Range(func(key, value interface{}) bool {
 					entry := value.(*ipEntry)
+					entry.mu.Lock()
 					if !entry.lockedUntil.IsZero() && time.Now().After(entry.lockedUntil) {
 						ipRecords.Delete(key)
-					}
-					if !entry.lockedUntil.IsZero() && time.Since(entry.lockedUntil) > 24*time.Hour {
+					} else if !entry.lockedUntil.IsZero() && time.Since(entry.lockedUntil) > 24*time.Hour {
+						ipRecords.Delete(key)
+					} else if entry.lockedUntil.IsZero() && entry.failedCount == 0 {
 						ipRecords.Delete(key)
 					}
-					if entry.lockedUntil.IsZero() && entry.failedCount == 0 {
-						ipRecords.Delete(key)
-					}
+					entry.mu.Unlock()
 					return true
 				})
 			}

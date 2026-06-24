@@ -8,6 +8,7 @@ import (
 )
 
 type rateEntry struct {
+	mu         sync.Mutex
 	timestamps []time.Time
 }
 
@@ -25,7 +26,6 @@ func RateLimit(maxPerMinute int) iris.Handler {
 			return
 		}
 
-		// 跳过 CAPTCHA 接口的限流
 		if ctx.Method() == "GET" {
 			ctx.Next()
 			return
@@ -38,6 +38,7 @@ func RateLimit(maxPerMinute int) iris.Handler {
 		actual, _ := rateRecords.LoadOrStore(ip, &rateEntry{})
 		entry := actual.(*rateEntry)
 
+		entry.mu.Lock()
 		var valid []time.Time
 		for _, t := range entry.timestamps {
 			if t.After(windowStart) {
@@ -47,6 +48,7 @@ func RateLimit(maxPerMinute int) iris.Handler {
 		entry.timestamps = valid
 
 		if len(valid) >= maxPerMinute {
+			entry.mu.Unlock()
 			ctx.StatusCode(iris.StatusTooManyRequests)
 			ctx.JSON(iris.Map{
 				"code":    429,
@@ -57,6 +59,7 @@ func RateLimit(maxPerMinute int) iris.Handler {
 		}
 
 		entry.timestamps = append(entry.timestamps, now)
+		entry.mu.Unlock()
 		ctx.Next()
 	}
 }
@@ -70,6 +73,7 @@ func startRateCleanup() {
 				cutoff := time.Now().Add(-1 * time.Minute)
 				rateRecords.Range(func(key, value interface{}) bool {
 					entry := value.(*rateEntry)
+					entry.mu.Lock()
 					var valid []time.Time
 					for _, t := range entry.timestamps {
 						if t.After(cutoff) {
@@ -81,6 +85,7 @@ func startRateCleanup() {
 					} else {
 						entry.timestamps = valid
 					}
+					entry.mu.Unlock()
 					return true
 				})
 			}

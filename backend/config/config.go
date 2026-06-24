@@ -101,6 +101,9 @@ func GetServerConfig() *ServerConfig {
 		WriteServerConfig(cfg)
 		return cfg
 	}
+	if cfg.SecurityConfig == nil {
+		cfg.SecurityConfig = GetDefaultServerConfig().SecurityConfig
+	}
 	return cfg
 }
 
